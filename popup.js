@@ -1,8 +1,7 @@
-// popup.js - Przełącznik trybu duch
+// popup.js - Sterowanie trybem duch
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const status = document.getElementById('status');
-const permBtn = document.getElementById('permBtn');
 
 function update(isRunning) {
     if (isRunning) {
@@ -21,25 +20,18 @@ function update(isRunning) {
 chrome.storage.local.get(['isRunning'], (res) => update(res.isRunning));
 
 startBtn.addEventListener('click', async () => {
-    // KLUCZOWE: Musimy poprosić o kamerę w popupie, żeby Chrome zapamiętał wybór
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(t => t.stop()); // Zamykamy od razu
-
+        stream.getTracks().forEach(t => t.stop());
         chrome.runtime.sendMessage({ action: 'startGhostMode' });
         update(true);
-        setTimeout(() => window.close(), 1000); // Samozamknięcie okna!
+        setTimeout(() => window.close(), 800);
     } catch (e) {
-        alert("BŁĄD: Musisz najpierw nadać uprawnienia! Kliknij link poniżej.");
+        alert("BŁĄD: Musisz najpierw nadać uprawnienia do kamery!");
     }
 });
 
 stopBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ action: 'stopGhostMode' });
     update(false);
-});
-
-permBtn.addEventListener('click', () => {
-    // Otwórz specjalną kartę do nadania uprawnień
-    window.open(chrome.runtime.getURL('app.html'));
 });
