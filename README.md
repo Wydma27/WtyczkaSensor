@@ -100,9 +100,9 @@ MIT License © 2026
 
 ## 👨‍💻 Autor
 
-WtyczkaSensor Project
+Wydma27
 
 ---
 
-**Wersja**: 1.0.0
+**Wersja**: 3.0.0
 **Ostatnia aktualizacja**: 2 marzec 2026
