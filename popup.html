@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 220px;
+            padding: 15px;
+            font-family: sans-serif;
+            background: #111827;
+            color: white;
+            margin: 0;
+        }
+
+        h3 {
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            color: #60a5fa;
+            text-align: center;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        #startBtn {
+            background: #059669;
+            color: white;
+        }
+
+        #stopBtn {
+            background: #dc2626;
+            color: white;
+            display: none;
+        }
+
+        .status {
+            font-size: 11px;
+            text-align: center;
+            margin-top: 10px;
+            color: #9ca3af;
+        }
+
+        .perm-link {
+            display: block;
+            margin-top: 10px;
+            color: #60a5fa;
+            font-size: 10px;
+            text-decoration: underline;
+            text-align: center;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h3>🎮 SENSOR DUCH</h3>
+    <button id="startBtn" class="btn">▶ URUCHOM SENSOR</button>
+    <button id="stopBtn" class="btn">⏹ WYŁĄCZ WSZYSTKO</button>
+    <div id="status" class="status">Tryb: Wyłączony</div>
+    <a id="permBtn" class="perm-link">Kliknij by nadać uprawnienia (Raz)</a>
+    <script src="popup.js"></script>
+</body>
+
+</html>

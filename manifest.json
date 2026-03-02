@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Wtyczka Sensor - Tryb Duch",
+  "version": "2.0.0",
+  "description": "Przewijaj dłonią bez żadnych widocznych okien.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs",
+    "offscreen",
+    "storage",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Wtyczka Sensor"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "vision_bundle.js",
+        "hand_landmarker.task",
+        "wasm/*",
+        "offscreen.html",
+        "offscreen.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
