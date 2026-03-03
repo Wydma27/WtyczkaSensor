@@ -33,13 +33,13 @@ Upewnij się, że masz alle następujące pliki w folderze wtyczki:
 
 ### Gesty dostępne:
 
-| Gest | Działanie | Opis |
-|------|----------|------|
-| 👆 Indeks | Scroll Up | Podnoszenie tylko palca wskazującego |
-| 👉 Mały palec | Scroll Down | Podnoszenie tylko małego palca |
-| ✌️ Nożyce | Brak działania | Indeks + środek |
-| ✊ Kamień | Brak działania | Wszystkie palce zamknięte |
-| ✋ Papier | Brak działania | Wszystkie palce otwarte |
+| Gest | Działanie |
+|------|----------|
+| 👆 Przesuwanie ręką do góry | Scroll Up |
+| 👇 Przesuwanie ręką do dołu | Scroll Down |
+| 👈 Przesuwanie ręką w lewo | Scroll Left |
+| 👉 Przesuwanie ręką w prawo | Scroll Right |
+
 
 ### Kroki:
 
