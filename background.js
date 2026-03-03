@@ -71,6 +71,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             });
         });
+    } else if (request.action === 'syncHUD') {
+        // Forward HUD data to current tab
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'syncHUD', data: request.data }).catch(() => { });
+            }
+        });
     } else if (request.action === 'error') {
         console.error("SENSOR ERROR:", request.message);
         chrome.notifications.create({

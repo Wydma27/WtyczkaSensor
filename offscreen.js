@@ -69,6 +69,7 @@ function process() {
             const isMiddleUp = lm[12].y < lm[10].y;
             const isRingUp = lm[16].y < lm[14].y;
             const isPinkyUp = lm[20].y < lm[18].y;
+            const isThumbUp = lm[4].x < lm[3].x; // Uproszczone dla kciuka
 
             // Tryb Historii (Tylko Wskazujący i Środkowy - jak litera V)
             const isHistoryMode = isIndexUp && isMiddleUp && !isRingUp && !isPinkyUp;
@@ -86,6 +87,17 @@ function process() {
             const rawX = sumX / points.length;
 
             if (baselineX === null) baselineX = rawX;
+
+            // --- WOW FACTOR: Wyślij dane HUD do content script ---
+            chrome.runtime.sendMessage({
+                action: 'syncHUD',
+                data: {
+                    x: rawX,
+                    y: rawY,
+                    fingers: [isThumbUp, isIndexUp, isMiddleUp, isRingUp, isPinkyUp],
+                    gesture: isHistoryMode ? 'history' : (isWholeHand ? 'scroll' : 'pointing')
+                }
+            });
 
             // 2. SWIPY (POZIOME) - Ulepszona detekcja "szarpnięcia"
             const diffX = rawX - baselineX;
@@ -133,6 +145,8 @@ function process() {
                 smoothHandY = null;
             }
         } else {
+            // Brak ręki - wyczyść HUD
+            chrome.runtime.sendMessage({ action: 'syncHUD', data: null });
             prevHandY = null;
             smoothHandY = null;
             baselineX = null;
