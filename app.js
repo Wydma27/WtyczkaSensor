@@ -118,7 +118,7 @@ function stop() {
     silencer.pause();
     startBtn.style.display = 'block';
     stopBtn.style.display = 'none';
-    alertBox.textContent = "⏹ Zatrzmiano.";
+    alertBox.textContent = "⏹ Zatrzymano.";
     statusBadge.textContent = "OTOCZENIE: OK";
     statusBadge.style.background = "#1e293b";
 }

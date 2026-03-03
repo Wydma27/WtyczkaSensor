@@ -21,17 +21,22 @@ function update(isRunning) {
     }
 }
 
-chrome.storage.local.get(['isRunning'], (res) => update(res.isRunning));
+chrome.storage.local.get(['isRunning'], (res) => {
+    update(res && res.isRunning);
+});
 
 startBtn.addEventListener('click', async () => {
     try {
+        // Próba uzyskania uprawnień, jeśli jeszcze ich nie ma
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         stream.getTracks().forEach(t => t.stop());
+        
         chrome.runtime.sendMessage({ action: 'startGhostMode' });
         update(true);
-        setTimeout(() => window.close(), 600);
+        setTimeout(() => window.close(), 400);
     } catch (e) {
-        alert("BŁĄD: Brak dostępu do kamery!");
+        console.error("Camera access error:", e);
+        alert("BŁĄD: Brak dostępu do kamery! Użyj przycisku kalibracji poniżej.");
     }
 });
 

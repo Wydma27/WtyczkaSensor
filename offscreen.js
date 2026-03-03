@@ -8,11 +8,11 @@ let smoothHandY = null;
 let prevRawX = null;
 let baselineX = null;
 
-const SMOOTHING = 0.05;
-const SCROLL_SCALE = 9000;
-const SWIPE_THRESHOLD = 0.08; // Super czuły próg
+const SMOOTHING = 0.12; // Złoty środek między szybkością a stabilnością
+const SCROLL_SCALE = 8500; // Zredukowana prędkość (zgodnie z prośbą)
+const SWIPE_THRESHOLD = 0.07;
 let lastSwipeTime = 0;
-const SWIPE_COOLDOWN = 200; // Prawie natychmiastowe kolejne swipy
+const SWIPE_COOLDOWN = 250;
 
 const video = document.createElement('video');
 video.autoplay = true;
@@ -36,13 +36,27 @@ async function init() {
             runningMode: 'VIDEO'
         });
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Używamy 'ideal', żeby nie wywaliło błędu jeśli kamera nie wspiera dokładnie 640x480
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 30 }
+                }
+            });
+        } catch (err) {
+            console.warn("Próba z idealnymi wymiarami padła, biorę co jest:", err);
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+
         video.srcObject = stream;
         video.onloadedmetadata = () => {
             video.play();
             webcamRunning = true;
             silencer.play().catch(() => { });
-            animationId = setInterval(process, 20); // 50 FPS
+            animationId = setInterval(process, 25);
         };
     } catch (e) {
         chrome.runtime.sendMessage({ action: 'error', message: e.message });
@@ -64,16 +78,14 @@ function process() {
                 return;
             }
 
-            // 1. DETEKCJA TRYBU (Ile palców jest wyprostowanych?)
+            // 1. DETEKCJA TRYBU
             const isIndexUp = lm[8].y < lm[6].y;
             const isMiddleUp = lm[12].y < lm[10].y;
             const isRingUp = lm[16].y < lm[14].y;
             const isPinkyUp = lm[20].y < lm[18].y;
-            const isThumbUp = lm[4].x < lm[3].x; // Uproszczone dla kciuka
+            const isThumbUp = Math.abs(lm[4].x - lm[2].x) > 0.05;
 
-            // Tryb Historii (Tylko Wskazujący i Środkowy - jak litera V)
             const isHistoryMode = isIndexUp && isMiddleUp && !isRingUp && !isPinkyUp;
-            // Tryb Kart/Przewijania (Wszystkie palce lub większość)
             const isWholeHand = isIndexUp && isMiddleUp && isRingUp;
 
             const points = [0, 5, 9, 13, 17];
@@ -83,12 +95,24 @@ function process() {
                 sumY += lm[i].y;
                 sumX += lm[i].x;
             });
-            const rawY = sumY / points.length;
-            const rawX = sumX / points.length;
+            let rawY = sumY / points.length;
+            let rawX = sumX / points.length;
+
+            // --- REMAPOWANIE (WIĘKSZY ZASIĘG EFEKTYWNY) ---
+            // Używamy większych marginesów (szczególnie w pionie), 
+            // żebyś nie musiał fizycznie zjeżdżać ręką do samej podłogi.
+            const marginX = 0.1;
+            const marginY = 0.3; // 30% marginesu - wystarczy mały ruch góra/dół żeby "przelecieć" przez ekran
+
+            rawX = (rawX - marginX) / (1 - 2 * marginX);
+            rawY = (rawY - marginY) / (1 - 2 * marginY);
+
+            rawX = Math.max(0, Math.min(1, rawX));
+            rawY = Math.max(0, Math.min(1, rawY));
 
             if (baselineX === null) baselineX = rawX;
 
-            // --- WOW FACTOR: Wyślij dane HUD do content script ---
+            // --- HUD SYNC ---
             chrome.runtime.sendMessage({
                 action: 'syncHUD',
                 data: {
@@ -99,12 +123,11 @@ function process() {
                 }
             });
 
-            // 2. SWIPY (POZIOME) - Ulepszona detekcja "szarpnięcia"
+            // 2. SWIPY
             const diffX = rawX - baselineX;
             const diffY = rawY - (prevHandY || rawY);
             const now = Date.now();
 
-            // Jeśli ruch poziomy jest wyraźnie silniejszy niż pionowy (zapobiega przypadkowym zmianom przy skrolowaniu)
             const isHorizontalIntention = Math.abs(diffX) > Math.abs(diffY) * 1.5;
 
             if (Math.abs(diffX) > SWIPE_THRESHOLD && isHorizontalIntention && now - lastSwipeTime > SWIPE_COOLDOWN) {
@@ -120,16 +143,15 @@ function process() {
                     });
                 }
                 lastSwipeTime = now;
-                baselineX = rawX; // Błyskawiczny reset po wykryciu
-                prevHandY = null; // Blokujemy scrolla przy swipe
+                baselineX = rawX;
+                prevHandY = null;
                 return;
             } else {
-                // Jeszcze szybsze śledzenie bazy, żeby machnięcie zawsze liczyło się od "teraz"
-                baselineX = baselineX * 0.4 + rawX * 0.6;
+                baselineX = baselineX * 0.5 + rawX * 0.5;
             }
 
-            // 3. SCROLL (PIONOWY) - Działa tylko gdy nie machamy na boki
-            if (isWholeHand && Math.abs(diffX) < SWIPE_THRESHOLD * 0.5) {
+            // 3. SCROLL
+            if (isWholeHand && Math.abs(diffX) < SWIPE_THRESHOLD * 0.8) {
                 if (smoothHandY === null) smoothHandY = rawY;
                 else smoothHandY = smoothHandY * (1 - SMOOTHING) + rawY * SMOOTHING;
 
@@ -145,7 +167,6 @@ function process() {
                 smoothHandY = null;
             }
         } else {
-            // Brak ręki - wyczyść HUD
             chrome.runtime.sendMessage({ action: 'syncHUD', data: null });
             prevHandY = null;
             smoothHandY = null;
