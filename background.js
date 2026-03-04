@@ -21,33 +21,29 @@ async function runScroll(pixels) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'startGhostMode') {
-        chrome.offscreen.hasDocument().then(has => {
-            if (!has) {
-                chrome.offscreen.createDocument({
-                    url: 'offscreen.html',
-                    reasons: ['USER_MEDIA'],
-                    justification: 'Sensor kamery pracujący w cieniu'
-                }).then(() => {
-                    offscreenCreated = true;
-                    chrome.storage.local.set({ isRunning: true });
-                }).catch((err) => {
-                    console.error("Błąd tworzenia offscreen:", err);
-                    // Próbujemy mimo to ustawić stan, być może dokument już istnieje mimo błędu
-                    chrome.storage.local.set({ isRunning: true });
-                });
-            } else {
+        if (!offscreenCreated) {
+            chrome.offscreen.createDocument({
+                url: 'offscreen.html',
+                reasons: ['USER_MEDIA'],
+                justification: 'Sensor kamery pracujący w cieniu'
+            }).then(() => {
                 offscreenCreated = true;
                 chrome.storage.local.set({ isRunning: true });
-            }
-        }).catch(() => {
-            // Rezerwowy mechanizm dla starszych wersji Chrome lub błędów
-            chrome.storage.local.set({ isRunning: true });
-        });
+            }).catch(() => {
+                offscreenCreated = true;
+                chrome.storage.local.set({ isRunning: true });
+            });
+        }
     } else if (request.action === 'stopGhostMode') {
-        chrome.offscreen.closeDocument().finally(() => {
-            offscreenCreated = false;
-            chrome.storage.local.set({ isRunning: false });
-        });
+        if (offscreenCreated) {
+            chrome.offscreen.closeDocument().then(() => {
+                offscreenCreated = false;
+                chrome.storage.local.set({ isRunning: false });
+            }).catch(() => {
+                offscreenCreated = false;
+                chrome.storage.local.set({ isRunning: false });
+            });
+        }
     } else if (request.action === 'doScroll') {
         runScroll(request.pixels);
     } else if (request.action === 'switchTab') {
@@ -75,17 +71,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             });
         });
-    } else if (request.action === 'syncHUD') {
-        // Forward HUD data to current tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]) {
-                chrome.tabs.sendMessage(tabs[0].id, { action: 'syncHUD', data: request.data }).catch(() => { });
-            }
-        });
     } else if (request.action === 'error') {
         console.error("SENSOR ERROR:", request.message);
-        offscreenCreated = false;
-        chrome.storage.local.set({ isRunning: false });
         chrome.notifications.create({
             type: 'basic',
             iconUrl: 'icon128.png',
@@ -97,9 +84,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 chrome.runtime.onStartup.addListener(() => {
-    chrome.storage.local.set({ isRunning: false });
-});
-
-chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.local.set({ isRunning: false });
 });
