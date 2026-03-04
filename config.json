@@ -1,114 +1,77 @@
 {
   "extension_config": {
-    "name": "Wtyczka Sensor - Przewijaj Ręką",
-    "version": "1.0.0",
+    "name": "Wtyczka Sensor - Tryb Duch",
+    "version": "2.0.0",
     "author": "WtyczkaSensor Project",
-    "description": "Przewijaj strony www za pomocą gestów rąk"
+    "description": "Przewijaj strony i nawiguj przeglądarką za pomocą gestów rąk – bez żadnych widocznych okien."
   },
-  
   "hand_detection": {
-    "min_hand_detection_confidence": 0.5,
-    "min_hand_presence_confidence": 0.5,
-    "min_tracking_confidence": 0.5,
-    "num_hands": 2,
-    "running_mode": "VIDEO"
+    "min_hand_detection_confidence": 0.3,
+    "min_hand_presence_confidence": 0.3,
+    "min_tracking_confidence": 0.3,
+    "num_hands": 1,
+    "running_mode": "VIDEO",
+    "target_fps": 30
   },
-  
-  "gesture_recognition": {
-    "enabled": true,
-    "gestures": {
-      "SCROLL_UP": {
-        "name": "Przewijanie w górę",
-        "description": "Unierz tylko palec wskazujący",
-        "landmarks": {
-          "index": "up",
-          "middle": "down",
-          "ring": "down",
-          "pinky": "down"
-        }
-      },
-      "SCROLL_DOWN": {
-        "name": "Przewijanie w dół",
-        "description": "Unierz tylko mały palec",
-        "landmarks": {
-          "index": "down",
-          "middle": "down",
-          "ring": "down",
-          "pinky": "up"
-        }
-      },
-      "ROCK": {
-        "name": "Kamień",
-        "description": "Zamknięta pięść",
-        "action": "none"
-      },
-      "PAPER": {
-        "name": "Papier",
-        "description": "Otwarta dłoń",
-        "action": "none"
-      },
-      "SCISSORS": {
-        "name": "Nożyce",
-        "description": "Indeks + Środek uniesione",
-        "action": "none"
-      }
+  "gestures": {
+    "FIST": {
+      "name": "Pięść (Kamień)",
+      "description": "Zaciśnij dłoń – sensor zostaje wstrzymany. Puść aby wznowić.",
+      "fingers_up": [],
+      "action": "pause_sensor"
+    },
+    "POINTING": {
+      "name": "Wskazywanie (1 palec)",
+      "description": "Tylko palec wskazujący uniesiony. Tryb wskaźnika – brak akcji scrollowania.",
+      "fingers_up": [
+        "index"
+      ],
+      "action": "hud_cursor"
+    },
+    "SCISSORS": {
+      "name": "Nożyczki (2 palce)",
+      "description": "Palec wskazujący I środkowy uniesione (bez serdecznego i małego). Tryb nawigacji po historii – machnij w lewo/prawo aby wrócić/dalej.",
+      "fingers_up": [
+        "index",
+        "middle"
+      ],
+      "action": "history_swipe"
+    },
+    "WHOLE_HAND": {
+      "name": "Otwarta dłoń (3+ palce)",
+      "description": "Palce wskazujący, środkowy i serdeczny uniesione. Tryb scrollowania – rusz ręką góra/dół. Machnij w lewo/prawo aby przełączyć kartę.",
+      "fingers_up": [
+        "index",
+        "middle",
+        "ring"
+      ],
+      "action": "scroll_and_tab_swipe"
     }
   },
-  
   "scroll_settings": {
-    "scroll_pixels": 50,
-    "gesture_threshold": 0.5,
-    "gesture_throttle_ms": 500,
-    "scroll_behavior": "smooth"
+    "scroll_scale": 8500,
+    "smoothing_factor": 0.12,
+    "min_delta_threshold": 0.0001,
+    "margin_x": 0.1,
+    "margin_y": 0.3
   },
-  
-  "ui_settings": {
-    "show_fps": true,
-    "show_detection_stats": true,
-    "show_gesture_name": true,
-    "theme": "dark",
-    "popup_timeout_ms": 3000
+  "swipe_settings": {
+    "threshold": 0.07,
+    "cooldown_ms": 250,
+    "horizontal_bias": 1.5,
+    "baseline_adaptation_speed": 0.2
   },
-  
   "camera_settings": {
-    "width": 640,
-    "height": 480,
-    "fps": 30,
-    "flip_horizontal": false
+    "width_ideal": 640,
+    "height_ideal": 480,
+    "fps_ideal": 30,
+    "flip_horizontal": true,
+    "note": "flip_horizontal=true bo lustrzane odbicie w HUD (1-x)"
   },
-  
   "performance": {
-    "enable_gpu": true,
-    "model_complexity": 0,
-    "smooth_landmarks": true
-  },
-  
-  "logging": {
-    "enabled": true,
-    "level": "info",
-    "console": true,
-    "file": {
-      "enabled": false,
-      "path": "logs/wtyczka_sensor.log"
-    }
-  },
-  
-  "advanced": {
-    "custom_scroll_profile": {
-      "enabled": false,
-      "profiles": {
-        "gentle": { "pixels": 20, "delay": 600 },
-        "normal": { "pixels": 50, "delay": 500 },
-        "fast": { "pixels": 100, "delay": 300 }
-      }
-    },
-    "gesture_chaining": {
-      "enabled": false,
-      "timeout_ms": 1000
-    },
-    "hand_tracking_smoothing": {
-      "enabled": true,
-      "factor": 0.7
-    }
+    "enable_gpu_delegate": true,
+    "hud_max_particles": 15,
+    "hud_particle_spawn_chance": 0.4,
+    "hud_particle_duration_ms": 600
   }
 }

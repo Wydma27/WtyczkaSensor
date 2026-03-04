@@ -1,19 +1,20 @@
 // popup.js - Sterowanie trybem duch
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
-const status = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+const statusBadge = document.getElementById('statusBadge');
 
 function update(isRunning) {
     if (isRunning) {
         startBtn.style.display = 'none';
         stopBtn.style.display = 'block';
-        status.textContent = 'Tryb: AKTYWNY (Ukryty)';
-        status.style.color = '#10b981';
+        if (statusText) statusText.textContent = 'Tryb: AKTYWNY (Ukryty)';
+        if (statusBadge) statusBadge.style.color = '#10b981';
     } else {
         startBtn.style.display = 'block';
         stopBtn.style.display = 'none';
-        status.textContent = 'Tryb: Wyłączony';
-        status.style.color = '#9ca3af';
+        if (statusText) statusText.textContent = 'Tryb: Wyłączony';
+        if (statusBadge) statusBadge.style.color = '#9ca3af';
     }
 }
 

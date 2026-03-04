@@ -29,6 +29,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }).then(() => {
                 offscreenCreated = true;
                 chrome.storage.local.set({ isRunning: true });
+
+                // Wyślij sensitivity do offscreen
+                setTimeout(() => {
+                    chrome.storage.local.get(['sensitivity'], (res) => {
+                        const sens = res && res.sensitivity ? parseFloat(res.sensitivity) / 15 : 1.0;
+                        try {
+                            chrome.runtime.sendMessage({
+                                action: 'setSensitivity',
+                                sensitivity: sens
+                            }).catch(() => { });
+                        } catch (e) {
+                            // Ignoruj
+                        }
+                    });
+                }, 300);
             }).catch(() => {
                 offscreenCreated = true;
                 chrome.storage.local.set({ isRunning: true });
@@ -80,9 +95,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             message: request.message
         });
     }
-    return true;
 });
 
 chrome.runtime.onStartup.addListener(() => {
     chrome.storage.local.set({ isRunning: false });
+});
+
+// Nasłuchaj zmian sensitivity i wyślij do offscreen
+chrome.storage.onChanged.addListener((changes) => {
+    if (changes.sensitivity && offscreenCreated) {
+        const sens = parseFloat(changes.sensitivity.newValue) / 15;
+        try {
+            chrome.runtime.sendMessage({
+                action: 'setSensitivity',
+                sensitivity: sens
+            }).catch(() => { });
+        } catch (e) {
+            // Ignoruj błędy
+        }
+    }
 });

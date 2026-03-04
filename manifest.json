@@ -7,6 +7,7 @@
     "activeTab",
     "scripting",
     "tabs",
+    "windows",
     "offscreen",
     "storage",
     "notifications"
@@ -15,8 +16,19 @@
     "<all_urls>"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; worker-src 'self'; connect-src 'self' blob: data:;"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -31,7 +43,9 @@
         "hand_landmarker.task",
         "wasm/*",
         "offscreen.html",
-        "offscreen.js"
+        "offscreen.js",
+        "app.html",
+        "app.js"
       ],
       "matches": [
         "<all_urls>"

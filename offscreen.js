@@ -7,6 +7,7 @@ let prevHandY = null;
 let smoothHandY = null;
 let prevRawX = null;
 let baselineX = null;
+let sensitivity = 1.0;
 
 const SMOOTHING = 0.05;
 const SCROLL_SCALE = 9000;
@@ -21,11 +22,22 @@ video.playsinline = true;
 const silencer = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD5AAAB+AAACABAAZGF0YQAAAAA=");
 silencer.loop = true;
 
+// Nasłuchaj sensitivity zmian z background
+try {
+    chrome.runtime.onMessage.addListener((request) => {
+        if (request.action === 'setSensitivity') {
+            sensitivity = request.sensitivity;
+        }
+    });
+} catch (e) {
+    // Ignoruj błędy
+}
+
 async function init() {
     try {
         const mp = await import(chrome.runtime.getURL('vision_bundle.js'));
         const { FilesetResolver, HandLandmarker } = mp;
-        const vision = await FilesetResolver.forVisionTasks(chrome.runtime.getURL('wasm'));
+        const vision = await FilesetResolver.forVisionTasks(chrome.runtime.getURL('wasm/'));
 
         handLandmarker = await HandLandmarker.createFromOptions(vision, {
             baseOptions: { modelAssetPath: chrome.runtime.getURL('hand_landmarker.task'), delegate: 'GPU' },
@@ -124,7 +136,7 @@ function process() {
                 if (prevHandY !== null) {
                     const deltaY = smoothHandY - prevHandY;
                     if (Math.abs(deltaY) > 0.0001) {
-                        chrome.runtime.sendMessage({ action: 'doScroll', pixels: deltaY * SCROLL_SCALE });
+                        chrome.runtime.sendMessage({ action: 'doScroll', pixels: deltaY * SCROLL_SCALE * sensitivity });
                     }
                 }
                 prevHandY = smoothHandY;
