@@ -11,7 +11,7 @@
     "min_tracking_confidence": 0.3,
     "num_hands": 1,
     "running_mode": "VIDEO",
-    "target_fps": 30
+    "target_fps": 36
   },
   "gestures": {
     "FIST": {
@@ -49,9 +49,9 @@
     }
   },
   "scroll_settings": {
-    "scroll_scale": 8500,
-    "smoothing_factor": 0.12,
-    "min_delta_threshold": 0.0001,
+    "scroll_scale": 12000,
+    "smoothing_factor": 0.08,
+    "min_delta_threshold": 0.0005,
     "margin_x": 0.1,
     "margin_y": 0.3
   },
@@ -62,9 +62,9 @@
     "baseline_adaptation_speed": 0.2
   },
   "camera_settings": {
-    "width_ideal": 640,
-    "height_ideal": 480,
-    "fps_ideal": 30,
+    "width_ideal": 1280,
+    "height_ideal": 720,
+    "fps_ideal": 36,
     "flip_horizontal": true,
     "note": "flip_horizontal=true bo lustrzane odbicie w HUD (1-x)"
   },

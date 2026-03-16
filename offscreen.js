@@ -34,8 +34,8 @@ let baselineX = null;
 let sensitivity = 1.0;
 
 // Wartości domyślne (nadpisane przez config.json po init)
-const SMOOTHING_DEFAULT = 0.05;
-const SCROLL_SCALE_DEFAULT = 9000;
+const SMOOTHING_DEFAULT = 0.08;
+const SCROLL_SCALE_DEFAULT = 12000;
 const SWIPE_THRESHOLD_DEFAULT = 0.08;
 const SWIPE_COOLDOWN_DEFAULT = 200;
 
@@ -126,7 +126,7 @@ async function init() {
 }
 
 // Pętla klatek oparta o setInterval (niezawodna w tle)
-const TARGET_INTERVAL_MS = 1000 / 30; // 30 FPS
+const TARGET_INTERVAL_MS = 1000 / 36; // 36 FPS (wyższa płynność przy scrollowaniu)
 
 function startLoop() {
     if (animationId) clearInterval(animationId);
@@ -230,8 +230,8 @@ function process() {
 
                 if (prevHandY !== null) {
                     const deltaY = smoothHandY - prevHandY;
-                    // Wyższy próg niż 0.0001 – eliminuje drżenie ręki bez ruchu
-                    if (Math.abs(deltaY) > 0.002) {
+                    // Obniżony próg detekcji ruchu (0.001) dla lepszej czułości w dolnych partiach
+                    if (Math.abs(deltaY) > 0.001) {
                         chrome.runtime.sendMessage({ action: 'doScroll', pixels: deltaY * SCROLL_SCALE * sensitivity });
                     }
                 }
