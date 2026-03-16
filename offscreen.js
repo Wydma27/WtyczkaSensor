@@ -15,9 +15,13 @@ const SWIPE_THRESHOLD = 0.08; // Super czuły próg
 let lastSwipeTime = 0;
 const SWIPE_COOLDOWN = 200; // Prawie natychmiastowe kolejne swipy
 
+let lastThumbTime = 0;
+const THUMB_COOLDOWN = 1000;
+
 const video = document.createElement('video');
 video.autoplay = true;
 video.playsinline = true;
+video.muted = true; // Wymagane przez politykę autoplay przeglądarek
 
 const silencer = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD5AAAB+AAACABAAZGF0YQAAAAA=");
 silencer.loop = true;
@@ -54,11 +58,28 @@ async function init() {
             video.play();
             webcamRunning = true;
             silencer.play().catch(() => { });
-            animationId = setInterval(process, 20); // 50 FPS
+            startLoop();
         };
     } catch (e) {
+        console.error('[Sensor] Błąd inicjalizacji:', e);
         chrome.runtime.sendMessage({ action: 'error', message: e.message });
     }
+}
+
+// Pętla klatek oparta o requestAnimationFrame (lepsza wydajność niż setInterval)
+let lastFrameTime = 0;
+const TARGET_FRAME_MS = 1000 / 50; // 50 FPS
+
+function startLoop() {
+    function loop(time) {
+        if (!webcamRunning) return;
+        if (time - lastFrameTime >= TARGET_FRAME_MS) {
+            lastFrameTime = time;
+            process();
+        }
+        animationId = requestAnimationFrame(loop);
+    }
+    animationId = requestAnimationFrame(loop);
 }
 
 function process() {
@@ -73,6 +94,25 @@ function process() {
                 prevHandY = null;
                 smoothHandY = null;
                 baselineX = null;
+                return;
+            }
+
+            // Thumbs Up / Thumbs Down (Zatrzymywanie / Wznawianie)
+            // Kciuk jest wysunięty, reszta zamknięta.
+            const isThumbUp = lm[4].y < lm[3].y && lm[4].y < lm[2].y && lm[8].y > lm[6].y && lm[12].y > lm[10].y && lm[16].y > lm[14].y && lm[20].y > lm[18].y;
+            const isThumbDown = lm[4].y > lm[3].y && lm[4].y > lm[2].y && !(lm[8].y < lm[6].y) && !(lm[12].y < lm[10].y) && !(lm[16].y < lm[14].y) && !(lm[20].y < lm[18].y); // Zabezpieczenie by kciuk opadał na dół
+
+            // Dalsza ewolucja isThumbDown – jeżeli opuszczony kciuk jest wyraźny:
+            const isStrictThumbDown = isThumbDown && lm[4].y > lm[0].y; // Kciuk schodzi poniżej nadgarstka i reszta palców zwinięta
+
+            const nowTime = Date.now();
+            if (isThumbUp && (nowTime - lastThumbTime > THUMB_COOLDOWN)) {
+                chrome.runtime.sendMessage({ action: 'mediaPlay' });
+                lastThumbTime = nowTime;
+                return;
+            } else if (isStrictThumbDown && (nowTime - lastThumbTime > THUMB_COOLDOWN)) {
+                chrome.runtime.sendMessage({ action: 'mediaPause' });
+                lastThumbTime = nowTime;
                 return;
             }
 
@@ -149,7 +189,9 @@ function process() {
             smoothHandY = null;
             baselineX = null;
         }
-    } catch (e) { }
+    } catch (e) {
+        console.warn('[Sensor] Błąd przetwarzania klatki:', e);
+    }
 }
 
 init();

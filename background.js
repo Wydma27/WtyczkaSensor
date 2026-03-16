@@ -86,6 +86,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             });
         });
+    } else if (request.action === 'mediaPlay') {
+        chrome.windows.getLastFocused({ populate: true }, (window) => {
+            if (!window) return;
+            chrome.tabs.query({ active: true, windowId: window.id }, (tabs) => {
+                if (!tabs[0]) return;
+                chrome.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    func: () => {
+                        const media = document.querySelector('video, audio');
+                        if (media && media.paused) {
+                            media.play();
+                        }
+                    }
+                }).catch(() => { });
+            });
+        });
+    } else if (request.action === 'mediaPause') {
+        chrome.windows.getLastFocused({ populate: true }, (window) => {
+            if (!window) return;
+            chrome.tabs.query({ active: true, windowId: window.id }, (tabs) => {
+                if (!tabs[0]) return;
+                chrome.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    func: () => {
+                        const media = document.querySelector('video, audio');
+                        if (media && !media.paused) {
+                            media.pause();
+                        }
+                    }
+                }).catch(() => { });
+            });
+        });
     } else if (request.action === 'error') {
         console.error("SENSOR ERROR:", request.message);
         chrome.notifications.create({

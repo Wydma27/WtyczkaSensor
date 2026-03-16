@@ -10,6 +10,9 @@ let smoothY = null;
 const SMOOTHING = 0.05;
 const SCROLL_FORCE = 9000;
 
+let lastThumbTime = 0;
+const THUMB_COOLDOWN = 1000;
+
 // Cache aktywnej zakładki (bez odpytywania przy każdej klatce)
 let cachedTabId = null;
 function refreshActiveTab() {
@@ -212,6 +215,30 @@ function processFrame(time) {
                 return;
             }
 
+            // Thumbs Up / Thumbs Down (Zatrzymywanie / Wznawianie)
+            const isThumbUp = lm[4].y < lm[3].y && lm[4].y < lm[2].y && lm[8].y > lm[6].y && lm[12].y > lm[10].y && lm[16].y > lm[14].y && lm[20].y > lm[18].y;
+            const isThumbDown = lm[4].y > lm[3].y && lm[4].y > lm[2].y && !(lm[8].y < lm[6].y) && !(lm[12].y < lm[10].y) && !(lm[16].y < lm[14].y) && !(lm[20].y < lm[18].y);
+            const isStrictThumbDown = isThumbDown && lm[4].y > lm[0].y;
+
+            const nowTime = Date.now();
+            if (isThumbUp && (nowTime - lastThumbTime > THUMB_COOLDOWN)) {
+                chrome.runtime.sendMessage({ action: 'mediaPlay' });
+                lastThumbTime = nowTime;
+                if (statusBadge) {
+                    statusBadge.textContent = "▶ PLAY (Kciuk W Górę)";
+                    statusBadge.style.background = "#10b981"; // Zielony
+                }
+                return;
+            } else if (isStrictThumbDown && (nowTime - lastThumbTime > THUMB_COOLDOWN)) {
+                chrome.runtime.sendMessage({ action: 'mediaPause' });
+                lastThumbTime = nowTime;
+                if (statusBadge) {
+                    statusBadge.textContent = "⏸ PAUSE (Kciuk W Dół)";
+                    statusBadge.style.background = "#f43f5e"; // Czerwony
+                }
+                return;
+            }
+
             const currentY = getPalmY(lm);
 
             if (smoothY === null) smoothY = currentY;
@@ -248,6 +275,7 @@ function processFrame(time) {
 
         if (fpsText) fpsText.textContent = Math.round(1000 / (performance.now() - t0 + 1)) + " FPS";
     } catch (e) {
+        console.warn('[Sensor/app] Błąd przetwarzania klatki:', e);
     }
 }
 

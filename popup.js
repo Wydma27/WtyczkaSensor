@@ -28,7 +28,14 @@ startBtn.addEventListener('click', async () => {
         update(true);
         setTimeout(() => window.close(), 800);
     } catch (e) {
-        alert("BŁĄD: Musisz najpierw nadać uprawnienia do kamery!");
+        // alert() jest niedozwolone/blokujące w rozszerzeniach – używamy notyfikacji
+        chrome.notifications.create('cam-error', {
+            type: 'basic',
+            iconUrl: 'icon128.png',
+            title: 'Brak dostępu do kamery',
+            message: 'Musisz najpierw nadać uprawnienia do kamery! Kliknij "Kalibracja Kamery" w popup.'
+        });
+        console.error('[Popup] Brak uprawnień do kamery:', e);
     }
 });
 
@@ -36,3 +43,12 @@ stopBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ action: 'stopGhostMode' });
     update(false);
 });
+
+// Kalibracja Kamery – otwórz stronę z uprawnieniami kamery
+const permBtn = document.getElementById('permBtn');
+if (permBtn) {
+    permBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        chrome.tabs.create({ url: 'chrome://settings/content/camera' });
+    });
+}
