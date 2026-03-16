@@ -3,6 +3,11 @@
   "name": "Wtyczka Sensor - Tryb Duch",
   "version": "2.0.0",
   "description": "Przewijaj dłonią bez żadnych widocznych okien.",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "permissions": [
     "activeTab",
     "scripting",
@@ -34,7 +39,12 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Wtyczka Sensor"
+    "default_title": "Wtyczka Sensor",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "web_accessible_resources": [
     {
@@ -45,7 +55,11 @@
         "offscreen.html",
         "offscreen.js",
         "app.html",
-        "app.js"
+        "app.js",
+        "icon16.png",
+        "icon48.png",
+        "icon128.png",
+        "config.json"
       ],
       "matches": [
         "<all_urls>"

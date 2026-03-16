@@ -22,20 +22,26 @@ chrome.storage.local.get(['isRunning'], (res) => update(res.isRunning));
 
 startBtn.addEventListener('click', async () => {
     try {
+        // Prośba o dostęp do kamery (musi być wywołana gestem użytkownika)
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        
+        // Jeśli dostaliśmy stream, zamykamy go i odpalamy tryb Ghost
         stream.getTracks().forEach(t => t.stop());
+        
+        console.log('[Popup] Uprawnienia OK, startuję Ghost Mode...');
         chrome.runtime.sendMessage({ action: 'startGhostMode' });
         update(true);
-        setTimeout(() => window.close(), 800);
+        
+        // Zamknij popup po chwili, żeby dać czas na wysłanie wiadomości
+        setTimeout(() => window.close(), 500);
     } catch (e) {
-        // alert() jest niedozwolone/blokujące w rozszerzeniach – używamy notyfikacji
+        console.error('[Popup] Krytyczny błąd startu:', e);
         chrome.notifications.create('cam-error', {
             type: 'basic',
             iconUrl: 'icon128.png',
-            title: 'Brak dostępu do kamery',
-            message: 'Musisz najpierw nadać uprawnienia do kamery! Kliknij "Kalibracja Kamery" w popup.'
+            title: 'Błąd kamery',
+            message: 'Nie można uzyskać dostępu do kamery. Sprawdź ustawienia uprawnień.'
         });
-        console.error('[Popup] Brak uprawnień do kamery:', e);
     }
 });
 

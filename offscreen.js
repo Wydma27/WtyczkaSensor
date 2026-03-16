@@ -1,4 +1,28 @@
 // offscreen.js – Niewidzialny Sensor (Moc 9000 + Tryb Duch)
+
+// --- Ładowanie konfiguracji z config.json ---
+let CFG = null;
+async function loadConfig() {
+    try {
+        const res = await fetch(chrome.runtime.getURL('config.json'));
+        CFG = await res.json();
+    } catch (e) {
+        console.warn('[Sensor] Nie można załadować config.json, używam wartości domyślnych:', e);
+        CFG = {}; // pustka – będą używane fallbacki
+    }
+}
+
+function cfg(path, fallback) {
+    const keys = path.split('.');
+    let val = CFG;
+    for (const k of keys) {
+        if (val == null || typeof val !== 'object') return fallback;
+        val = val[k];
+    }
+    return val !== undefined ? val : fallback;
+}
+// --- Koniec ładowania konfiguracji ---
+
 let handLandmarker;
 let webcamRunning = false;
 let animationId = null;
@@ -9,19 +33,30 @@ let prevRawX = null;
 let baselineX = null;
 let sensitivity = 1.0;
 
-const SMOOTHING = 0.05;
-const SCROLL_SCALE = 9000;
-const SWIPE_THRESHOLD = 0.08; // Super czuły próg
-let lastSwipeTime = 0;
-const SWIPE_COOLDOWN = 200; // Prawie natychmiastowe kolejne swipy
+// Wartości domyślne (nadpisane przez config.json po init)
+const SMOOTHING_DEFAULT = 0.05;
+const SCROLL_SCALE_DEFAULT = 9000;
+const SWIPE_THRESHOLD_DEFAULT = 0.08;
+const SWIPE_COOLDOWN_DEFAULT = 200;
 
+let SMOOTHING = SMOOTHING_DEFAULT;
+let SCROLL_SCALE = SCROLL_SCALE_DEFAULT;
+let SWIPE_THRESHOLD = SWIPE_THRESHOLD_DEFAULT;
+let SWIPE_COOLDOWN = SWIPE_COOLDOWN_DEFAULT;
+
+let lastSwipeTime = 0;
 let lastThumbTime = 0;
 const THUMB_COOLDOWN = 1000;
 
-const video = document.createElement('video');
+// Pobieramy element video z DOM offscreen.html
+const video = document.getElementById('video') || document.createElement('video');
+if (!video.id) {
+    video.id = 'video';
+    document.body.appendChild(video);
+}
 video.autoplay = true;
 video.playsinline = true;
-video.muted = true; // Wymagane przez politykę autoplay przeglądarek
+video.muted = true;
 
 const silencer = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD5AAAB+AAACABAAZGF0YQAAAAA=");
 silencer.loop = true;
@@ -39,20 +74,44 @@ try {
 
 async function init() {
     try {
+        await loadConfig();
+
+        // Wczytaj wartości z config.json
+        SMOOTHING = cfg('scroll_settings.smoothing_factor', SMOOTHING_DEFAULT);
+        SCROLL_SCALE = cfg('scroll_settings.scroll_scale', SCROLL_SCALE_DEFAULT);
+        SWIPE_THRESHOLD = cfg('swipe_settings.threshold', SWIPE_THRESHOLD_DEFAULT);
+        SWIPE_COOLDOWN = cfg('swipe_settings.cooldown_ms', SWIPE_COOLDOWN_DEFAULT);
+
+        const useGPU = cfg('performance.enable_gpu_delegate', true) ? 'GPU' : 'CPU';
+        const numHands = cfg('hand_detection.num_hands', 1);
+        const detConf = cfg('hand_detection.min_hand_detection_confidence', 0.3);
+        const presConf = cfg('hand_detection.min_hand_presence_confidence', 0.3);
+        const trackConf = cfg('hand_detection.min_tracking_confidence', 0.3);
+        const targetFPS = cfg('hand_detection.target_fps', 30);
+
         const mp = await import(chrome.runtime.getURL('vision_bundle.js'));
         const { FilesetResolver, HandLandmarker } = mp;
-        const vision = await FilesetResolver.forVisionTasks(chrome.runtime.getURL('wasm/'));
+        
+        // Gwarantujemy, że ścieżka do WASM kończy się slashem
+        const wasmPath = chrome.runtime.getURL('wasm/');
+        const vision = await FilesetResolver.forVisionTasks(wasmPath);
 
         handLandmarker = await HandLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: chrome.runtime.getURL('hand_landmarker.task'), delegate: 'GPU' },
-            numHands: 1,
-            minHandDetectionConfidence: 0.1,
-            minHandPresenceConfidence: 0.1,
-            minTrackingConfidence: 0.1,
+            baseOptions: { modelAssetPath: chrome.runtime.getURL('hand_landmarker.task'), delegate: useGPU },
+            numHands,
+            minHandDetectionConfidence: detConf,
+            minHandPresenceConfidence: presConf,
+            minTrackingConfidence: trackConf,
             runningMode: 'VIDEO'
         });
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const camW = cfg('camera_settings.width_ideal', 640);
+        const camH = cfg('camera_settings.height_ideal', 480);
+        const camFPS = cfg('camera_settings.fps_ideal', targetFPS);
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: camW }, height: { ideal: camH }, frameRate: { ideal: camFPS } }
+        });
         video.srcObject = stream;
         video.onloadedmetadata = () => {
             video.play();
@@ -66,30 +125,26 @@ async function init() {
     }
 }
 
-// Pętla klatek oparta o requestAnimationFrame (lepsza wydajność niż setInterval)
-let lastFrameTime = 0;
-const TARGET_FRAME_MS = 1000 / 50; // 50 FPS
+// Pętla klatek oparta o setInterval (niezawodna w tle)
+const TARGET_INTERVAL_MS = 1000 / 30; // 30 FPS
 
 function startLoop() {
-    function loop(time) {
-        if (!webcamRunning) return;
-        if (time - lastFrameTime >= TARGET_FRAME_MS) {
-            lastFrameTime = time;
-            process();
-        }
-        animationId = requestAnimationFrame(loop);
-    }
-    animationId = requestAnimationFrame(loop);
+    if (animationId) clearInterval(animationId);
+    animationId = setInterval(process, TARGET_INTERVAL_MS);
 }
 
 function process() {
     if (!webcamRunning || !handLandmarker) return;
+    
+    // Sprawdzamy czy video faktycznie dostarcza dane
+    if (video.readyState < 2) return; 
+
     try {
         const results = handLandmarker.detectForVideo(video, performance.now());
         if (results.landmarks && results.landmarks.length > 0) {
             const lm = results.landmarks[0];
 
-            // Pięść = STOP
+            // Pięść = STOP (Zatrzymanie scrollowania i reset)
             if (lm[8].y > lm[6].y && lm[12].y > lm[10].y && lm[16].y > lm[14].y) {
                 prevHandY = null;
                 smoothHandY = null;
@@ -175,7 +230,8 @@ function process() {
 
                 if (prevHandY !== null) {
                     const deltaY = smoothHandY - prevHandY;
-                    if (Math.abs(deltaY) > 0.0001) {
+                    // Wyższy próg niż 0.0001 – eliminuje drżenie ręki bez ruchu
+                    if (Math.abs(deltaY) > 0.002) {
                         chrome.runtime.sendMessage({ action: 'doScroll', pixels: deltaY * SCROLL_SCALE * sensitivity });
                     }
                 }
